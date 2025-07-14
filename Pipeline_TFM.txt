@@ -1,0 +1,58 @@
+**************TFM1*******************
+***Carga archivos:
+LSA-2024-0047_3948_ME.vcf (grupo e investigación)
+exones.fasta (BioMart)
+
+***Creación del entorno
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+conda init
+source ~/.bashrc
+conda create -n bioinfo_env -c conda-forge -c bioconda blast bcftools libnsl
+conda activate bioinfo_env
+conda install pip
+conda install -c conda-forge biopython
+
+***(base) [alumno16@ledley trabajo]$ grep -v "^#" LSA-2024-0047_3948_ME.vcf | cut -f8 | grep -o "SVTYPE=[^;]*" | sort | uniq -c
+    210 SVTYPE=BND
+   2220 SVTYPE=DEL
+    181 SVTYPE=DUP
+   3225 SVTYPE=INS
+    103 SVTYPE=INV
+
+***extraer las inserciones del .vcf 
+bcftools view -i 'SVTYPE="INS"' LSA-2024-0047_3948_ME.vcf -o inserciones.vcf
+
+***inserciones .vcf a .fasta
+Ver código python 
+
+***validar el inserciones.fasta
+grep -n '^$' inserciones.fasta
+Busca líneas vacías en el archivo.
+→ Sin salida = No hay líneas vacías. 
+
+grep -v '^>' inserciones.fasta | grep -n '[^ATCGNatcgn]'
+Busca cualquier carácter que no sea A, T, C, G, N (mayúsculas o minúsculas) en las líneas que no son encabezados.
+→ Sin salida = Las secuencias solo contienen caracteres válidos. 
+
+***Hacer exones.fasta como base de datos
+makeblastdb -in exones.fasta -dbtype nucl -out exones_db
+
+***blast inserciones.fasta vs exones_db
+blastn \
+  -query inserciones.fasta \
+  -db exones_db \
+  -out resultados_inserciones_vs_exones.tsv \
+  -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' \
+
+***PRIMER FILTRO 
+La inserción control es ~1 kb, pero los exones en la base de datos suelen ser mucho más cortos.
+Ver codigo python
+
+***separar columnas qseqid y sseqid, y ordenar alfabeticamente por gen 
+Ver código python
+
+***SEGUNDO FILTRO
+Hemos definido que para determinar que una inserción sea candidata a pseudogenización debe tener al menos 2 exones o más.
+Ver código python
+
+
